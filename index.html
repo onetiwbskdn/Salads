@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Minecraft Java Edition</title>
+<style>
+  :root{
+    --bg:#2b2b2b; --panel:#3c3c3c; --panel2:#4a4a4a; --line:#1e1e1e;
+    --dirt:#8b5a2b; --grass:#5b8f3a; --grass2:#4a7a2e; --stone:#7f7f7f;
+    --text:#ffffff; --muted:#a0a0a0; --gold:#ffaa00; --green:#55ff55;
+    --red:#ff5555; --blue:#5555ff; --btnTop:#8b8b8b; --btnBot:#555555;
+    --btnTopHover:#a0a0a0; --btnBotHover:#666666;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;font-family:"Minecraft", "Courier New", monospace;overflow:hidden;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    display:flex;flex-direction:column;
+    background-image:
+      linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.65)),
+      repeating-linear-gradient(45deg,#3a3a3a 0 40px,#333 40px 80px);
+    image-rendering:pixelated;
+  }
+  .pixel{image-rendering:pixelated;}
+
+  /* ===== ЭКРАН ЗАГРУЗКИ ===== */
+  #loading{
+    position:fixed;inset:0;background:#1a1a1a;z-index:999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  }
+  #loading.hide{display:none;}
+  .load-title{font-size:26px;color:var(--gold);text-shadow:2px 2px 0 #3f3f00;letter-spacing:1px;}
+  .load-bar{width:280px;max-width:80vw;height:16px;background:#1e1e1e;border:2px solid #000;}
+  .load-fill{height:100%;width:0;background:linear-gradient(180deg,#7cff5e,#3a9e1e);transition:width .3s;}
+  .load-tip{font-size:12px;color:var(--muted);}
+
+  /* ===== ГЛАВНОЕ МЕНЮ ===== */
+  #menu{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .menu-box{width:420px;max-width:92vw;text-align:center;}
+  .menu-logo{
+    font-size:42px;font-weight:900;letter-spacing:3px;margin-bottom:6px;
+    color:#c8c8c8;
+    text-shadow:
+      0 2px 0 #555, 0 4px 0 #3a3a3a, 0 6px 0 #2a2a2a,
+      0 8px 12px rgba(0,0,0,.8);
+    transform:perspective(300px) rotateX(12deg);
+  }
+  .menu-logo span{color:var(--green);}
+  .menu-sub{font-size:12px;color:var(--muted);letter-spacing:4px;margin-bottom:30px;}
+
+  .mc-btn{
+    display:block;width:100%;margin-bottom:10px;padding:14px 10px;
+    font-family:inherit;font-size:16px;font-weight:700;color:#fff;
+    text-shadow:2px 2px 0 rgba(0,0,0,.6);
+    background:linear-gradient(180deg,var(--btnTop),var(--btnBot));
+    border:2px solid #000;
+    border-top-color:#d0d0d0;border-left-color:#d0d0d0;
+    border-bottom-color:#2a2a2a;border-right-color:#2a2a2a;
+    cursor:pointer;position:relative;transition:.05s;
+    letter-spacing:.5px;
+  }
+  .mc-btn:hover{background:linear-gradient(180deg,var(--btnTopHover),var(--btnBotHover));}
+  .mc-btn:active{transform:translateY(2px);border-top-color:#2a2a2a;border-left-color:#2a2a2a;border-bottom-color:#d0d0d0;border-right-color:#d0d0d0;}
+  .mc-btn.play{background:linear-gradient(180deg,#6fbf4a,#3e7a2a);font-size:20px;padding:18px;}
+  .mc-btn.play:hover{background:linear-gradient(180deg,#7fd45a,#4a8a32);}
+  .mc-btn.small{padding:10px;font-size:13px;margin-bottom:8px;}
+  .mc-btn.danger{background:linear-gradient(180deg,#bf4a4a,#7a2a2a);}
+  .mc-btn.danger:hover{background:linear-gradient(180deg,#d45a5a,#8a3232);}
+
+  .menu-foot{
+    position:absolute;bottom:10px;left:0;right:0;text-align:center;
+    font-size:10px;color:var(--muted);
+  }
+  .menu-topright{
+    position:absolute;top:10px;right:12px;font-size:11px;color:var(--muted);
+    display:flex;gap:8px;align-items:center;
+  }
+
+  /* ===== ЭКРАНЫ ПАНЕЛЕЙ ===== */
+  .screen{
+    position:fixed;inset:0;background:rgba(20,20,20,.94);z-index:100;
+    display:none;flex-direction:column;
+  }
+  .screen.show{display:flex;}
+  .screen-head{
+    display:flex;align-items:center;gap:12px;padding:12px 18px;
+    background:linear-gradient(180deg,#3c3c3c,#2a2a2a);border-bottom:2px solid #000;
+    flex-shrink:0;
+  }
+  .screen-head h2{margin:0;font-size:18px;color:#fff;text-shadow:2px 2px 0 #000;letter-spacing:1px;}
+  .screen-head .back{
+    padding:8px 14px;font-family:inherit;font-size:13px;color:#fff;
+    background:linear-gradient(180deg,#8b8b8b,#555);border:2px solid #000;
+    border-top-color:#d0d0d0;border-left-color:#d0d0d0;cursor:pointer;
+  }
+  .screen-head .back:hover{background:linear-gradient(180deg,#a0a0a0,#666);}
+  .screen-body{flex:1;overflow-y:auto;padding:20px;}
+
+  /* ===== СПИСКИ МИРОВ И СЕРВЕРОВ ===== */
+  .world-list{display:flex;flex-direction:column;gap:8px;max-width:900px;margin:0 auto;}
+  .world-item{
+    display:flex;align-items:center;gap:14px;padding:12px;
+    background:linear-gradient(180deg,#4a4a4a,#3a3a3a);
+    border:2px solid #000;border-top-color:#6a6a6a;border-left-color:#6a6a6a;
+    cursor:pointer;transition:.1s;
+  }
+  .world-item:hover{background:linear-gradient(180deg,#5a5a5a,#444);}
+  .world-item .icon{
+    width:56px;height:56px;flex-shrink:0;border:2px solid #000;
+    background:linear-gradient(180deg,#6fc23a 0 30%,#8b5a2b 30% 100%);
+    position:relative;
+  }
+  .world-item .icon::after{
+    content:"";position:absolute;left:8px;right:8px;bottom:8px;height:14px;
+    background:#5a3a1b;border:1px solid #3a2a0b;
+  }
+  .world-item .w-info{flex:1;min-width:0;}
+  .world-item .w-info b{display:block;font-size:15px;margin-bottom:3px;}
+  .world-item .w-info small{font-size:11px;color:var(--muted);display:block;}
+  .world-item .w-size{font-size:10px;color:var(--gold);}
+  .world-item .del{
+    background:linear-gradient(180deg,#bf4a4a,#7a2a2a);border:2px solid #000;
+    color:#fff;font-family:inherit;font-size:11px;padding:6px 10px;cursor:pointer;
+  }
+
+  /* ===== ФОРМА ===== */
+  .form{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:12px;color:var(--gold);letter-spacing:.5px;}
+  .field input[type=text], .field input[type=number], .field select{
+    padding:11px 12px;font-family:inherit;font-size:14px;color:#fff;
+    background:#1e1e1e;border:2px solid #000;
+    border-top-color:#000;border-left-color:#000;border-bottom-color:#6a6a6a;border-right-color:#6a6a6a;
+    outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--green);}
+  .field .hint{font-size:10px;color:var(--muted);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .toggle-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 12px;background:#333;border:2px solid #000;
+  }
+  .toggle-row span{font-size:13px;}
+  .toggle{
+    width:46px;height:24px;background:#1e1e1e;border:2px solid #000;position:relative;cursor:pointer;
+    transition:.15s;flex-shrink:0;
+  }
+  .toggle::after{
+    content:"";position:absolute;top:1px;left:1px;width:18px;height:18px;
+    background:#888;transition:.15s;
+  }
+  .toggle.on{background:#3e7a2a;}
+  .toggle.on::after{left:23px;background:#7cff5e;}
+
+  /* ===== РЕЖИМЫ ===== */
+  .gamemodes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .gm{
+    padding:12px 6px;text-align:center;font-size:11px;cursor:pointer;
+    background:linear-gradient(180deg,#4a4a4a,#3a3a3a);
+    border:2px solid #000;border-top-color:#6a6a6a;border-left-color:#6a6a6a;
+  }
+  .gm .gm-ico{font-size:22px;display:block;margin-bottom:4px;}
+  .gm.sel{background:linear-gradient(180deg,#6fbf4a,#3e7a2a);box-shadow:0 0 0 2px var(--green) inset;}
+
+  /* ===== КОСТЮМЫ ===== */
+  .costume-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-width:900px;margin:0 auto;}
+  .costume{
+    background:linear-gradient(180deg,#4a4a4a,#333);border:2px solid #000;
+    border-top-color:#6a6a6a;border-left-color:#6a6a6a;padding:10px;text-align:center;cursor:pointer;
+    transition:.1s;
+  }
+  .costume:hover{background:linear-gradient(180deg,#5a5a5a,#3d3d3d);}
+  .costume.equipped{box-shadow:0 0 0 2px var(--green) inset;background:linear-gradient(180deg,#5a8a3a,#3a5a2a);}
+  .costume .fig{width:60px;height:90px;margin:0 auto 8px;position:relative;}
+  .costume .fig .head{position:absolute;left:50%;top:0;transform:translateX(-50%);width:26px;height:26px;background:var(--c-head,#c8a27a);border:1px solid #000;}
+  .costume .fig .body{position:absolute;left:50%;top:28px;transform:translateX(-50%);width:36px;height:34px;background:var(--c-body,#3a5a9a);border:1px solid #000;}
+  .costume .fig .legs{position:absolute;left:50%;top:64px;transform:translateX(-50%);width:36px;height:24px;background:var(--c-legs,#2a3a6a);border:1px solid #000;}
+  .costume span{font-size:11px;display:block;}
+  .costume small{font-size:9px;color:var(--muted);}
+  .equip-note{max-width:900px;margin:0 auto 16px;padding:12px;background:rgba(85,255,85,.08);border:2px solid rgba(85,255,85,.3);font-size:12px;line-height:1.6;}
+
+  .char-preview{position:fixed;right:20px;bottom:20px;width:100px;z-index:60;background:rgba(0,0,0,.4);border:2px solid #000;padding:8px;text-align:center;pointer-events:none;}
+  .char-preview .fig{width:60px;height:90px;margin:0 auto 6px;position:relative;}
+  .char-preview .fig .head{position:absolute;left:50%;top:0;transform:translateX(-50%);width:26px;height:26px;background:var(--c-head,#c8a27a);border:1px solid #000;}
+  .char-preview .fig .body{position:absolute;left:50%;top:28px;transform:translateX(-50%);width:36px;height:34px;background:var(--c-body,#3a5a9a);border:1px solid #000;}
+  .char-preview .fig .legs{position:absolute;left:50%;top:64px;transform:translateX(-50%);width:36px;height:24px;background:var(--c-legs,#2a3a6a);border:1px solid #000;}
+  .char-preview small{font-size:9px;color:var(--gold);}
+
+  /* ===== ЭКРАН ИГРЫ ===== */
+  #gameScreen{
+    position:fixed;inset:0;background:#000;z-index:500;display:none;
+    flex-direction:column;
+  }
+  #gameScreen.show{display:flex;}
+  .game-hud{position:absolute;inset:0;pointer-events:none;}
+  .crosshair{position:absolute;top:50%;left:50%;width:20px;height:20px;transform:translate(-50%,-50%);}
+  .crosshair::before,.crosshair::after{content:"";position:absolute;background:rgba(255,255,255,.8);}
+  .crosshair::before{left:9px;top:0;width:2px;height:20px;}
+  .crosshair::after{top:9px;left:0;width:20px;height:2px;}
+  
+  .hud-bars{position:absolute;bottom:70px;left:20px;display:flex;gap:4px;}
+  .heart{width:18px;height:18px;background:#ff0000;clip-path:polygon(50% 100%, 0 50%, 20% 20%, 50% 40%, 80% 20%, 100% 50%);}
+  
+  .hotbar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:2px;background:rgba(0,0,0,.5);padding:4px;border:2px solid #555;}
+  .slot{width:44px;height:44px;background:rgba(139,139,139,.5);border:2px solid #333;display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .slot.active{border-color:#fff;background:rgba(200,200,200,.6);}
+  
+  .game-menu-btn{position:absolute;top:20px;left:20px;pointer-events:auto;padding:10px 15px;background:rgba(0,0,0,.6);color:#fff;border:2px solid #fff;font-family:inherit;cursor:pointer;}
+
+  @media (max-width:820px){
+    .menu-logo{font-size:32px;}
+    .screen-head h2{font-size:15px;}
+    .screen-body{padding:14px 12px 80px;}
+    .row2{grid-template-columns:1fr;}
+    .gamemodes{grid-template-columns:repeat(2,1fr);}
+    .costume-grid{grid-template-columns:repeat(2,1fr);}
+    .world-item .icon{width:44px;height:44px;}
+    .world-item .w-info b{font-size:13px;}
+    .char-preview{width:80px;right:10px;bottom:10px;padding:5px;}
+    .char-preview .fig{transform:scale(.8);transform-origin:center;}
+    .slot{width:36px;height:36px;font-size:18px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= НАЧАЛЬНАЯ ЗАГРУЗКА ================= -->
+<div id="loading">
+  <div class="load-title">MINECRAFT</div>
+  <div class="load-bar"><div class="load-fill" id="loadFill"></div></div>
+  <div class="load-tip" id="loadTip">Загрузка Java Edition...</div>
+</div>
+
+<!-- ================= ЭКРАН ИГРЫ ================= -->
+<div id="gameScreen">
+  <div style="flex:1;position:relative;background:linear-gradient(180deg,#87CEEB 0%,#87CEEB 60%,#5b8f3a 60%,#4a7a2e 100%);">
+    <!-- Текстура земли и неба (имитация) -->
+    <div class="game-hud">
+      <div class="crosshair"></div>
+      <div class="hud-bars">
+        <div class="heart"></div><div class="heart"></div><div class="heart"></div><div class="heart"></div><div class="heart"></div>
+        <div class="heart"></div><div class="heart"></div><div class="heart"></div><div class="heart"></div><div class="heart"></div>
+      </div>
+      <div class="hotbar">
+        <div class="slot active" id="handSlot">✋</div>
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+      </div>
+    </div>
+    <button class="game-menu-btn" onclick="exitGame()">Меню игры</button>
+    
+    <div style="position:absolute;top:20px;right:20px;color:#fff;font-size:14px;text-shadow:1px 1px 0 #000;text-align:right;pointer-events:none;">
+      <div>Мир: <span id="inGameWorld">Новый мир</span></div>
+      <div>Онлайн: <span id="inGamePlayers">2</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ГЛАВНОЕ МЕНЮ ================= -->
+<div id="menu">
+  <div class="menu-topright">
+    <span id="menuNick">Steve</span> · <span style="color:var(--green)">●</span> online
+  </div>
+
+  <div class="menu-box">
+    <div class="menu-logo">MINE<span>CRAFT</span></div>
+    <div class="menu-sub">JAVA EDITION · 1.20.1</div>
+
+    <button class="mc-btn play" onclick="openScreen('single')">Одиночная игра</button>
+    <button class="mc-btn" onclick="openScreen('multi')">Сетевая игра</button>
+    <button class="mc-btn" onclick="openScreen('costumes')">Костюмы и скины</button>
+    <button class="mc-btn" onclick="openScreen('settings')">Настройки</button>
+    <button class="mc-btn small" onclick="alert('Плащ: CustomSkinLoader активен')">Плащ: Включён</button>
+    <button class="mc-btn danger small" onclick="if(confirm('Выйти из игры?'))location.reload()">Выход</button>
+  </div>
+
+  <div class="menu-foot">Minecraft Java Edition · Кроссплатформа ПК ↔ Телефон · Мир 20 000 000 × 20 000 000 блоков</div>
+</div>
+
+<!-- ================= ПРЕВЬЮ ПЕРСОНАЖА ================= -->
+<div class="char-preview" id="charPreview">
+  <div class="fig" id="charFig">
+    <div class="head"></div><div class="body"></div><div class="legs"></div>
+  </div>
+  <small id="charName">Steve</small>
+</div>
+
+<!-- ================= ЭКРАН: ОДИНОЧНАЯ ИГРА ================= -->
+<div class="screen" id="screen-single">
+  <div class="screen-head">
+    <button class="back" onclick="closeScreen('single')">◀ Назад</button>
+    <h2>Одиночная игра</h2>
+  </div>
+  <div class="screen-body">
+    <div style="max-width:900px;margin:0 auto 16px;">
+      <button class="mc-btn play" onclick="openScreen('createWorld')">＋ Создать новый мир</button>
+    </div>
+    <div class="world-list" id="worldList"></div>
+  </div>
+</div>
+
+<!-- ================= ЭКРАН: СОЗДАНИЕ МИРА ================= -->
+<div class="screen" id="screen-createWorld">
+  <div class="screen-head">
+    <button class="back" onclick="closeScreen('createWorld')">◀ Назад</button>
+    <h2>Создание мира</h2>
+  </div>
+  <div class="screen-body">
+    <div class="form">
+      <div class="field">
+        <label>Название мира</label>
+        <input type="text" id="worldName" value="Новый мир" maxlength="32">
+      </div>
+      <div class="field">
+        <label>Сид (seed)</label>
+        <input type="text" id="worldSeed" placeholder="Случайный">
+      </div>
+      <div class="field">
+        <label>Режим игры</label>
+        <div class="gamemodes" id="gamemodes">
+          <div class="gm sel" data-mode="Выживание"><span class="gm-ico">⛏</span>Выживание</div>
+          <div class="gm" data-mode="Творческий"><span class="gm-ico">🧱</span>Творческий</div>
+          <div class="gm" data-mode="Приключение"><span class="gm-ico">🗺</span>Приключение</div>
+          <div class="gm" data-mode="Наблюдатель"><span class="gm-ico">👁</span>Наблюдатель</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="mc-btn" onclick="closeScreen('createWorld')">Отмена</button>
+        <button class="mc-btn play" onclick="createWorld()">Создать мир</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ЭКРАН: СЕТЕВАЯ ИГРА ================= -->
+<div class="screen" id="screen-multi">
+  <div class="screen-head">
+    <button class="back" onclick="closeScreen('multi')">◀ Назад</button>
+    <h2>Сетевая игра</h2>
+  </div>
+  <div class="screen-body">
+    <div class="world-list" id="serverList"></div>
+  </div>
+</div>
+
+<!-- ================= ЭКРАН: КОСТЮМЫ ================= -->
+<div class="screen" id="screen-costumes">
+  <div class="screen-head">
+    <button class="back" onclick="closeScreen('costumes')">◀ Назад</button>
+    <h2>Костюмы и скины</h2>
+  </div>
+  <div class="screen-body">
+    <div class="equip-note">
+      <b>Костюмы из модов.</b> Надень костюм — он отобразится на твоём персонаже и у друга в мире.
+    </div>
+    <div class="costume-grid" id="costumeGrid"></div>
+  </div>
+</div>
+
+<script>
+/* ================= СОСТОЯНИЕ ================= */
+const state = {
+  nick: 'Steve',
+  costume: null,
+  worlds: [],
+  servers: [],
+  gamemode: 'Выживание'
+};
+
+/* ================= НАЧАЛЬНАЯ ЗАГРУЗКА ================= */
+const loadTips = ['Загрузка Java Edition...','Инициализация Forge...','Готово!'];
+let tipI = 0, fill = 0;
+const fillEl = document.getElementById('loadFill');
+const tipEl = document.getElementById('loadTip');
+const loadTimer = setInterval(()=>{
+  fill += 25;
+  fillEl.style.width = fill + '%';
+  tipEl.innerText = loadTips[Math.min(tipI, loadTips.length-1)];
+  tipI++;
+  if(fill >= 100){
+    clearInterval(loadTimer);
+    setTimeout(()=>document.getElementById('loading').classList.add('hide'), 350);
+  }
+}, 300);
+
+/* ================= НАВИГАЦИЯ ================= */
+function openScreen(id){ document.getElementById('screen-'+id).classList.add('show'); }
+function closeScreen(id){ document.getElementById('screen-'+id).classList.remove('show'); }
+
+/* ================= РЕЖИМЫ ================= */
+document.querySelectorAll('#gamemodes .gm').forEach(g=>{
+  g.onclick = ()=>{
+    document.querySelectorAll('#gamemodes .gm').forEach(x=>x.classList.remove('sel'));
+    g.classList.add('sel');
+    state.gamemode = g.dataset.mode;
+  };
+});
+
+/* ================= МИРЫ ================= */
+function renderWorlds(){
+  const list = document.getElementById('worldList');
+  list.innerHTML = '';
+  if(state.worlds.length === 0){
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px;font-size:13px;">Миров нет. Создай новый.</div>';
+    return;
+  }
+  state.worlds.forEach((w, i)=>{
+    const d = document.createElement('div');
+    d.className = 'world-item';
+    d.innerHTML = `
+      <div class="icon"></div>
+      <div class="w-info">
+        <b>${w.name}</b>
+        <small>Режим: ${w.mode} · Тип: ${w.type}</small>
+        <span class="w-size">20 000 000 × 20 000 000</span>
+      </div>
+      <button class="del">Удалить</button>
+    `;
+    d.onclick = (e)=>{
+      if(e.target.classList.contains('del')){ state.worlds.splice(i,1); renderWorlds(); return; }
+      startGame(w.name, w.mode, 'Мир');
+    };
+    list.appendChild(d);
+  });
+}
+renderWorlds();
+
+function createWorld(){
+  const name = document.getElementById('worldName').value.trim() || 'Новый мир';
+  state.worlds.push({name, mode: state.gamemode, type: 'Обычный'});
+  renderWorlds();
+  closeScreen('createWorld');
+  openScreen('single');
+}
+
+/* ================= СЕРВЕРЫ ================= */
+const defaultServers = [
+  {name:'LuckyWorld', ip:'play.luckyworld.net', ver:'1.20.6', players:'120/500'},
+  {name:'FunnyGame', ip:'play.funnygame.ru', ver:'1.12–1.21', players:'340/1000'},
+  {name:'Minewind', ip:'mc.minewind.com', ver:'1.21', players:'85/300'},
+  {name:'CubeCraft', ip:'play.cubecraft.net', ver:'1.20.1', players:'210/800'},
+  {name:'Мой сервер', ip:'localhost:25565', ver:'1.20.1 Forge', players:'0/20'}
+];
+state.servers = [...defaultServers];
+
+function renderServers(){
+  const list = document.getElementById('serverList');
+  list.innerHTML = '';
+  state.servers.forEach((s, i)=>{
+    const d = document.createElement('div');
+    d.className = 'world-item';
+    d.innerHTML = `
+      <div class="icon" style="background:linear-gradient(180deg,#555 0 30%,#333 30% 100%);"></div>
+      <div class="w-info">
+        <b>${s.name} <span style="color:#55ff55;">●</span></b>
+        <small>${s.ip} · ${s.ver}</small>
+        <span class="w-size">Игроков: ${s.players}</span>
+      </div>
+      <button class="del">Удалить</button>
+    `;
+    d.onclick = (e)=>{
+      if(e.target.classList.contains('del')){ state.servers.splice(i,1); renderServers(); return; }
+      startGame(s.name, 'Выживание', 'Сервер');
+    };
+    list.appendChild(d);
+  });
+}
+renderServers();
+
+/* ================= ЗАПУСК ИГРЫ (ФЕЙКОВАЯ ЗАГРУЗКА + ИГРА) ================= */
+function startGame(name, mode, type){
+  // Закрываем все меню
+  document.querySelectorAll('.screen.show').forEach(s=>s.classList.remove('show'));
+  
+  // Показываем экран загрузки с прогрессом
+  const loading = document.getElementById('loading');
+  const fillEl = document.getElementById('loadFill');
+  const tipEl = document.getElementById('loadTip');
+  loading.classList.remove('hide');
+  fillEl.style.width = '0%';
+  
+  const gameLoadTips = [
+    'Генерация ландшафта...',
+    'Загрузка чанков (20 000 000 блоков)...',
+    'Инициализация модов...',
+    'Синхронизация скинов...',
+    'Вход в мир...'
+  ];
+  
+  let gFill = 0;
+  let gTip = 0;
+  
+  const gameTimer = setInterval(()=>{
+    gFill += 20;
+    fillEl.style.width = gFill + '%';
+    tipEl.innerText = gameLoadTips[Math.min(gTip, gameLoadTips.length-1)];
+    gTip++;
+    
+    if(gFill >= 100){
+      clearInterval(gameTimer);
+      setTimeout(()=>{
+        loading.classList.add('hide');
+        document.getElementById('gameScreen').classList.add('show');
+        document.getElementById('inGameWorld').innerText = name;
+        document.getElementById('inGamePlayers').innerText = type === 'Сервер' ? '125' : '2';
+        
+        // Ставим костюм в руку, если надет
+        const handSlot = document.getElementById('handSlot');
+        if(state.costume) {
+          const c = costumes.find(x => x.id === state.costume);
+          handSlot.innerText = '🧱'; // Имитация блока
+          handSlot.style.color = c.body;
+        }
+      }, 300);
+    }
+  }, 400);
+}
+
+function exitGame(){
+  document.getElementById('gameScreen').classList.remove('show');
+}
+
+/* ================= КОСТЮМЫ ================= */
+const costumes = [
+  {id:'steve',   n:'Стив',         head:'#c8a27a', body:'#3a5a9a', legs:'#2a3a6a', mod:'Vanilla'},
+  {id:'hero',    n:'Герой',        head:'#f85149', body:'#1f6feb', legs:'#0d3a7a', mod:"Fisk's Superheroes"},
+  {id:'vampire', n:'Вампир',       head:'#6e40c9', body:'#1b1f27', legs:'#0d0f15', mod:'Vampirism'},
+  {id:'ninja',   n:'Ниндзя',       head:'#30363d', body:'#161b22', legs:'#0d1117', mod:"Fisk's Superheroes"},
+  {id:'iron',    n:'Железный',     head:'#c0392b', body:'#e67e22', legs:'#7a4a1a', mod:'GabeUp Super Pack'},
+  {id:'spider',  n:'Человек-паук', head:'#c0392b', body:'#1f3a93', legs:'#12245a', mod:'GabeUp Super Pack'},
+  {id:'hulk',    n:'Халк',         head:'#2ecc71', body:'#27ae60', legs:'#1e8449', mod:'GabeUp Super Pack'},
+  {id:'thor',    n:'Тор',          head:'#f1c40f', body:'#8e1a1a', legs:'#5a0f0f', mod:'GabeUp Super Pack'},
+  {id:'ghost',   n:'Призрак',      head:'#ecf0f1', body:'#95a5a6', legs:'#5a6a6a', mod:'Vanilla'}
+];
+
+function renderCostumes(){
+  const grid = document.getElementById('costumeGrid');
+  grid.innerHTML = '';
+  costumes.forEach(c=>{
+    const d = document.createElement('div');
+    d.className = 'costume' + (state.costume === c.id ? ' equipped' : '');
+    d.innerHTML = `
+      <div class="fig">
+        <div class="head" style="background:${c.head}"></div>
+        <div class="body" style="background:${c.body}"></div>
+        <div class="legs" style="background:${c.legs}"></div>
+      </div>
+      <span>${c.n}</span>
+      <small>${c.mod}</small>
+    `;
+    d.onclick = ()=>{
+      state.costume = c.id;
+      updatePreview(c);
+      renderCostumes();
+    };
+    grid.appendChild(d);
+  });
+}
+renderCostumes();
+
+function updatePreview(c){
+  const fig = document.getElementById('charFig');
+  fig.querySelector('.head').style.background = c.head;
+  fig.querySelector('.body').style.background = c.body;
+  fig.querySelector('.legs').style.background = c.legs;
+  document.getElementById('charName').innerText = state.nick;
+}
+
+updatePreview(costumes[0]);
+
+/* ================= ЭСКЕЙП ================= */
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.screen.show').forEach(s=>s.classList.remove('show'));
+  }
+});
+</script>
+</body>
+</html>
